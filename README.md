@@ -1,1 +1,1 @@
-# Proyecto IngSoft3 - versión A
+# Proyecto IngSoft3 - versión B
