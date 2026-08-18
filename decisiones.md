@@ -23,3 +23,6 @@ No se utilizo la IA, solo utilce la guia .md y el video con la voz del profe.
 - **Frontend:** HTML/JS / React.
 - **Base de Datos:** PostgreSQL.
 - **Justificación:** Cumple con los requisitos mínimos de backend + frontend + BD. Es un sistema ligero, fácil de mantener y probar.
+
+## Declaración de uso de IA
+Se utilizo la IA para ayudarme a entender conceptos y comandos a lo largo del tp, ademas de decirme que dependencias e imagenes de mis tecnologias debia utilizar en los Dockerfile. Tambien ayudo a redactar el README.md

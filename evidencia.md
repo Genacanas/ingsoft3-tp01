@@ -21,3 +21,10 @@ GitHub rechaza el push porque main está protegida y la regla alcanza también a
 
 ## 2. Frontend interactuando con la base de datos y backend
 ![push rechazado](img/tp2_02.png)
+
+## 3. Packages subidos a github
+![push rechazado](img/tp2_03.png)
+
+## 4. Contenedores corriendo, con imagenes descargadas de la nube y ghcr.io deslogeado
+![push rechazado](img/tp2_04.png)
+![push rechazado](img/tp2_05.png)
