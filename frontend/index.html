@@ -1,0 +1,42 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Gestor de Tareas</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>📝 Gestor de Tareas</h1>
+            <p>Ingeniería de Software 3</p>
+        </header>
+
+        <section class="task-form-section">
+            <h2>Nueva Tarea</h2>
+            <form id="task-form">
+                <div class="form-group">
+                    <label for="titulo">Título:</label>
+                    <input type="text" id="titulo" required placeholder="Ej. Estudiar para parcial de Ing. Software">
+                </div>
+                <div class="form-group">
+                    <label for="descripcion">Descripción (opcional):</label>
+                    <textarea id="descripcion" rows="3" placeholder="Detalles o notas sobre la tarea..."></textarea>
+                </div>
+                <button type="submit" class="btn btn-primary">Agregar Tarea</button>
+            </form>
+        </section>
+
+        <section class="task-list-section">
+            <h2>Mis Tareas</h2>
+            <div id="loading" class="loading">Conectando con el backend...</div>
+            <ul id="task-list" class="task-list">
+                <!-- Las tareas se inyectarán aquí dinámicamente mediante JS -->
+            </ul>
+        </section>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>

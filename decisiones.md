@@ -13,3 +13,13 @@ No tuve problemas en si, mas de los esperados.
 
 ## Declaración de uso de IA
 No se utilizo la IA, solo utilce la guia .md y el video con la voz del profe.
+
+
+## TP2 — Contenedores
+
+### 1. Elección de la app del semestre
+- **Aplicación:** Gestor de Tareas (To-Do List).
+- **Backend:** Python con FastAPI.
+- **Frontend:** HTML/JS / React.
+- **Base de Datos:** PostgreSQL.
+- **Justificación:** Cumple con los requisitos mínimos de backend + frontend + BD. Es un sistema ligero, fácil de mantener y probar.
