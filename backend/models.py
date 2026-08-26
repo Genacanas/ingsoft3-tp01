@@ -9,5 +9,9 @@ class Tarea(Base):
     titulo = Column(String, index=True, nullable=False)
     descripcion = Column(String, nullable=True)
     completada = Column(Boolean, default=False)
-    # Genera la fecha automáticamente en el motor de base de datos
+    prioridad = Column(String, default="media", nullable=False)
+    
+    # Fechas para cálculos de SLA
     fecha_creacion = Column(DateTime(timezone=True), server_default=func.now())
+    fecha_vencimiento = Column(DateTime(timezone=True), nullable=True)
+    fecha_completada = Column(DateTime(timezone=True), nullable=True)
