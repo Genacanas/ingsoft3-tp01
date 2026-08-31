@@ -45,3 +45,30 @@ Se estableció un límite de **2 tarjetas** en la columna *In Progress*. Siguien
 
 ### 5. Declaración de Uso de IA
 Se utilizó IA como asistente conceptual para la estructuración de la jerarquía (Épica -> Historia -> Tareas), la redacción del archivo `.github/workflows/ci.yml` y la articulación de las justificaciones ágiles para la defensa oral.
+
+# TP04 Decisiones de Diseño y Arquitectura - (CI: Pipelines as Code)
+
+## 1. Estructura del Pipeline
+Se configuraron dos jobs independientes que ejecutan en paralelo: `build-backend` y `build-frontend`[cite: 1].
+* **¿Por qué en paralelo?**: Para minimizar el tiempo total de ejecución y validar que ambas partes se construyan de manera aislada en runners efímeros[cite: 1].
+* **Triggers**: Se definieron disparadores para `pull_request` sobre `main` (para validar los cambios antes de integrar) y `push` sobre `main` (para actualizar la corrida que lee el badge y dejar el cache listo para futuros PRs)[cite: 1].
+
+## 2. Construcción basada en Dockerfile
+El pipeline ejecuta `docker/build-push-action` usando los `Dockerfile` del TP2 en lugar de compilar directamente en el runner con herramientas nativas[cite: 1].
+* **Razón**: Mantiene una única fuente de verdad[cite: 1]. Evita tener dos definiciones de build que puedan divergir y garantiza que el CI verifica exactamente la misma imagen que luego se desplegará en producción[cite: 1].
+
+## 3. Estrategia de Cache de Capas
+Se configuró el cache del builder en GitHub Actions (`type=gha`) utilizando `docker/setup-buildx-action`[cite: 1].
+* **Capas reutilizadas**: Aquellas que instalan dependencias cuando los archivos manifiesto (`.csproj`, `package.json`) no sufren modificaciones[cite: 1].
+* **Capas no reutilizadas**: Las etapas finales que copian el código fuente y compilan la aplicación[cite: 1].
+* **Comportamiento si el cache desaparece**: El pipeline es totalmente independiente del cache[cite: 1]. Si las capas se eliminan o expiran, la construcción simplemente se realiza desde cero, tardando más tiempo pero resultando exitosa[cite: 1].
+
+## 4. Problemas Encontrados y Soluciones
+* **Conflicto de cache entre jobs**: Inicialmente ambos jobs sobreescribían sus capas[cite: 1]. Se solucionó definiendo un identificador de espacio único (`scope=backend` y `scope=frontend`) en las opciones del cache[cite: 1].
+* **Bloqueo por actualización de rama (`strict: true`)**: La regla exigió que la rama del PR estuviera al día con `main` antes de hacer el merge[cite: 1]. Se resolvió presionando **Update branch** en el PR para correr la verificación sobre el resultado mezclado[cite: 1].
+
+## 5. Declaración de Uso de IA
+Se utilizó la asistencia de IA para:
+* Guiar la configuración de los triggers y sintaxis de los workflows de GitHub Actions[cite: 1].
+* Diagnosticar el funcionamiento de las reglas de protección de rama y el comportamiento del gate[cite: 1].
+* Verificación: Cada sugerencia fue probada, ejecutada y auditada a través de los logs de la pestaña Actions y las revisiones en los Pull Requests[cite: 1].
