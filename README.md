@@ -1,3 +1,5 @@
+[![CI](https://github.com/Genacanas/ingsoft3-tp01/actions/workflows/ci.yml/badge.svg)](https://github.com/Genacanas/ingsoft3-tp01/actions/workflows/ci.yml)
+
 # Proyecto IngSoft3 - versión B
 
 
