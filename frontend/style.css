@@ -234,3 +234,56 @@ textarea:focus {
     padding: 2rem 0;
     font-size: 1.1rem;
 }
+
+.form-select {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    font-size: 1rem;
+}
+
+.metrics-grid {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+.metric-card {
+    background-color: #e3f2fd;
+    padding: 1rem;
+    border-radius: 6px;
+    flex: 1;
+    text-align: center;
+    border: 1px solid #bbdefb;
+}
+.metric-card h3 {
+    font-size: 0.9rem;
+    color: #2c3e50;
+    margin-bottom: 0.5rem;
+}
+.metric-card p {
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: var(--primary-color);
+}
+.metric-detail {
+    text-align: center;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+}
+.badge {
+    display: inline-block;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: bold;
+    color: white;
+    margin-bottom: 0.5rem;
+}
+.badge-alta { background-color: var(--danger-color); }
+.badge-media { background-color: #f39c12; }
+.badge-baja { background-color: #95a5a6; }
+.badge-sla { margin-left: 0.5rem; font-size: 0.7rem; }
+.badge-sla-ok { background-color: var(--success-color); }
+.badge-sla-fail { background-color: var(--danger-color); }
+

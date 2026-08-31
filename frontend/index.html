@@ -9,9 +9,24 @@
 <body>
     <div class="container">
         <header>
-            <h1>📝 Gestor de Tareas</h1>
+            <h1>📝 Gestor de Tareas SLA</h1>
             <p>Ingeniería de Software 3</p>
         </header>
+
+        <section class="dashboard-section" id="dashboard" style="display: none;">
+            <h2>📊 Métricas de Productividad (SLA)</h2>
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3>SLA Cumplido</h3>
+                    <p id="metric-sla">0%</p>
+                </div>
+                <div class="metric-card">
+                    <h3>Total Resueltas</h3>
+                    <p id="metric-total">0</p>
+                </div>
+            </div>
+            <p class="metric-detail" id="metric-times">Tiempo promedio: Alta (0h) | Media (0h) | Baja (0h)</p>
+        </section>
 
         <section class="task-form-section">
             <h2>Nueva Tarea</h2>
@@ -23,6 +38,14 @@
                 <div class="form-group">
                     <label for="descripcion">Descripción (opcional):</label>
                     <textarea id="descripcion" rows="3" placeholder="Detalles o notas sobre la tarea..."></textarea>
+                </div>
+                <div class="form-group">
+                    <label for="prioridad">Prioridad:</label>
+                    <select id="prioridad" class="form-select">
+                        <option value="baja">Baja (Vence en 7 días)</option>
+                        <option value="media" selected>Media (Vence en 3 días)</option>
+                        <option value="alta">Alta (Vence en 24 horas)</option>
+                    </select>
                 </div>
                 <button type="submit" class="btn btn-primary">Agregar Tarea</button>
             </form>
