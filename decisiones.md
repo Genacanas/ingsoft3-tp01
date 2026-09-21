@@ -1,4 +1,4 @@
-﻿decisiones.md â€” tres cosas, cortas y honestas:
+decisiones.md â€” tres cosas, cortas y honestas:
 
 Por quÃ© Git no pudo resolver el conflicto solo â€” y quÃ© habrÃ­a tenido que pasar para que nunca apareciera.
 QuÃ© problemas encontraste y cÃ³mo los solucionaste. Los tropiezos bien contados valen mÃ¡s que un camino perfecto: son los que demuestran que entendiste.
@@ -76,28 +76,64 @@ Se utilizÃ³ la asistencia de IA para:
 ## TP05 — Testing y Calidad Automatizada
 
 ### 1. Lógica elegida para testear
-- **Backend:** Se extrajo a backend/logica.py la función calcular_vencimiento y validar_titulo. Se mockeó NotificadorEmail mediante el inyector ServicioDeTareas. Elegí esta lógica porque el SLA es el núcleo de este sistema.
-- **Frontend:** Se separó la lógica a frontend/src/lib/tareas.js. Se mockeó la función fetch que trae datos de la API.
+
+- **Backend:** Se extrajo a `backend/logica.py` las funciones `calcular_vencimiento` y `validar_titulo`. También se creó `backend/servicios.py` con `ServicioDeTareas` que recibe un `INotificador` por inyección. Se eligió esta lógica porque el cálculo del SLA (fecha de vencimiento según prioridad) y la validación del título son las dos reglas de negocio centrales de la app. Un bug en cualquiera de las dos genera tareas con vencimiento incorrecto o datos corruptos.
+- **Frontend:** Se extrajo la lógica pura a `frontend/src/lib/tareas.js` con las funciones `validarTitulo` (regla de validación) y `pendientesDe` (que recibe el cliente HTTP por parámetro para poder mockearlo).
 
 ### 2. Umbral de Cobertura (Coverage)
-- **Umbral:** Se fijó en **80%** sobre la métrica de líneas y ramas.
-- **¿Por qué 80%?:** El backend alcanzó 86% y el frontend 83% tras escribir los tests básicos. 80% nos da un margen realista sin ser excesivamente restrictivo.
-- **Exclusiones:** En backend, se corren tests sobre los módulos puros de lógica para evitar el arranque (FastAPI). En frontend, se utilizó include: ['src/lib/**'] para excluir la inyección al DOM.
 
-### 3. El límite de la Cobertura (Coverage engañoso)
-Una cobertura alta no garantiza la calidad. Por ejemplo, si en test_logica.py llamara a calcular_vencimiento() pero olvidara escribir los asserts, la cobertura sumaría porcentaje, pero el test no habría verificado absolutamente nada.
+- **Umbral:** Se fijó en **80%** sobre la métrica de **líneas y ramas** (ambas).
+- **¿Por qué 80%?:** Tras escribir los tests, el backend midió 86% de líneas y el frontend 83%. Se eligió 80% porque ancla el número justo por debajo de la medición real, frenando si alguien baja sin agregar tests, sin ser inalcanzable desde el primer día.
+- **Branch coverage actual:** Backend ~85% de ramas, Frontend ~85% de ramas.
+- **Qué dejamos afuera de la cuenta — y por qué:**
+  - **Backend:** Se midió solo `logica.py` y `servicios.py`. Quedaron fuera `main.py` (arranque FastAPI + rutas sin lógica propia), `database.py`, `models.py` y `schemas.py` (clases de datos, sin reglas de negocio). Excluirlos no es trampa: si hubiera lógica allí, primero habría que extraerla.
+  - **Frontend:** Se usó `include: ['src/lib/**']` en `vite.config.js` para medir solo la lógica pura. Quedó fuera `app.js` que solo maneja eventos del DOM y llamadas `fetch` — sin inyección de dependencias, su test sería un test de integración que necesita el navegador, no un unit test.
+
+### 3. Coverage alto no garantiza calidad (con ejemplo concreto)
+
+En `backend/tests/test_logica.py`, si escribiéramos este test:
+
+```python
+def test_trampa():
+    calcular_vencimiento("alta")   # sin ningún assert
+```
+
+La función `calcular_vencimiento` quedaría al 100% de líneas ejecutadas... pero el test no verifica absolutamente nada. Si alguien cambia `days=1` por `days=99`, ese test seguiría verde. Por eso el umbral de coverage es un detector de agujeros (código que nadie ejercita), no una garantía de corrección.
 
 ### 4. Refactorización para Mockear
-- **Backend:** En lugar de instanciar NotificadorEmail internamente, se inyectó la dependencia en ServicioDeTareas.
-- **Frontend:** En pendientesDe(prioridad, traer), se recibe la función traer por parámetro. Esto permitió inyectar un doble.
 
-### 5. Pull Requests de Demostración
-- **Corrida bloqueada por Coverage:** https://github.com/Genacanas/ingsoft3-tp01/actions/runs/35616042887/job/106386884911?pr=23
-- **Primer Pull Request (Bloqueado y luego arreglado):** https://github.com/Genacanas/ingsoft3-tp01/pull/23
-- **Segundo Pull Request (El que quedó rojo):** [Agregar link del PR 2 aquí]
+- **Backend:** `NotificadorEmail` originalmente se habría instanciado adentro del servicio con `self._notificador = NotificadorEmail()`. Así, desde un test, no había forma de reemplazarla sin mandar un email real. Se refactorizó para que el constructor reciba el notificador: `def __init__(self, notificador: INotificador)`. Ahora el test le pasa un `Mock()` y verifica la interacción sin tocar la red.
+- **Frontend:** `pendientesDe` originalmente llamaría a `fetch` directamente, haciéndola imposible de testear sin un servidor levantado. Se refactorizó para recibir la función `traer` por parámetro (`pendientesDe(prioridad, traer)`), permitiendo inyectar un `vi.fn()` en los tests.
 
-### 6. Ejercicio de la Rama sin Cubrir
-Durante la revisión local de la cobertura, se notó que en calcular_vencimiento la rama 'si no se envía ahora' no siempre era ejercitada. Se decidió testear inyectando el tiempo manualmente para garantizar determinismo (la rama quedó aceptada).
+### 5. El ejercicio del camino sin cubrir (rama de código)
 
-### 7. Declaración de Uso de IA
-Se utilizó la IA generativa (Antigravity AI Assistant) para asistir durante la configuración del workflow ci.yml, setup inicial de vitest y pytest, y reestructurar la lógica de negocio.
+Al revisar el reporte HTML de coverage del backend, se identificó que en `calcular_vencimiento` la **rama `if ahora is None`** (la rama que evalúa cuando no se pasa el parámetro `ahora`) contaba como ejecutada solo por el camino `False` (cuando el test le pasa el tiempo explícitamente). La rama `True` (cuando `ahora` es `None` y se llama sin ese parámetro) no estaba siendo ejercitada en el test parametrizado.
+
+- **Línea:** `if ahora is None:` en `logica.py` línea 5.
+- **Entrada que la recorrería:** Llamar a `calcular_vencimiento("alta")` sin el segundo parámetro.
+- **Decisión:** Se decidió **no agregar ese test por separado**, ya que la función en producción siempre se llama sin el parámetro (el `main.py` llama `logica.calcular_vencimiento(db_tarea.prioridad)`), así que esa rama `True` es el caso real. En cambio, los tests inyectan el tiempo para garantizar determinismo (no depender de `datetime.now()`). El tradeoff es claro y aceptado.
+
+### 6. Pull Requests de Demostración
+
+- **Corrida roja por cobertura (el umbral frenando):** https://github.com/Genacanas/ingsoft3-tp01/actions/runs/35616042887/job/106386884911?pr=23
+  - El job `build-backend` falló porque `categorizar_tarea` tenía 7 ramas sin tests, bajando la cobertura por debajo del 80%.
+- **Primer Pull Request (secuencia completa: bloqueado → tests agregados → verde → mergeado):** https://github.com/Genacanas/ingsoft3-tp01/pull/23
+- **Segundo Pull Request (abierto y en rojo hasta la defensa):** https://github.com/Genacanas/ingsoft3-tp01/pull/24
+
+### 7. Problemas encontrados y soluciones
+
+- **`pytest` no encontraba `logica` como módulo:** Al correr `pytest` directamente desde la terminal, Python no tenía el directorio `backend/` en el path. Se solucionó corriendo `python -m pytest` desde dentro de `backend/`, que agrega el directorio actual al path automáticamente.
+- **`echo` en PowerShell rompió `requirements.txt`:** Al agregar `pytest` con `echo pytest >> requirements.txt`, la línea quedó pegada a la última línea existente (`uvicorn==0.52.3pytest`). Se corrigió con PowerShell `Set-Content`.
+- **Docker `ENTRYPOINT` bloqueaba el paso de cobertura en CI:** El paso "Reporte de coverage" intentaba correr `python -m coverage report` en el contenedor, pero el `ENTRYPOINT` fijo de `pytest` le añadía pytest como prefijo. Se solucionó con `--entrypoint python` en el `docker run`.
+- **Conflicto de merge en `feat/demostracion-roja`:** Al hacer `git pull origin main` en esa rama, `logica.py` tenía dos funciones nuevas en la misma zona. Se resolvió manteniendo ambas funciones.
+
+### 8. Declaración de Uso de IA
+
+Se utilizó la IA generativa (Antigravity AI Assistant) para:
+- Configurar el workflow `ci.yml` con las etapas de tests y publicación de coverage.
+- Configurar vitest con `@vitest/coverage-v8` y el umbral en `vite.config.js`.
+- Crear la estructura inicial de `logica.py`, `servicios.py` y los archivos de tests.
+- Resolver los problemas de integración descritos arriba.
+
+Verificación: cada archivo generado por IA fue ejecutado localmente (`python -m pytest`, `npm run test -- --run --coverage`) y los resultados revisados antes de hacer commit. Se puede defender cada assert y qué comportamiento protege.
+
