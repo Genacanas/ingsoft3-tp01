@@ -6,6 +6,12 @@ import datetime
 
 import models, schemas
 from database import engine, get_db
+import logica
+from servicios import ServicioDeTareas, NotificadorEmail
+
+# Instanciamos el servicio
+notificador_real = NotificadorEmail()
+servicio_tareas = ServicioDeTareas(notificador_real)
 
 # Crear las tablas en la base de datos de forma síncrona
 models.Base.metadata.create_all(bind=engine)
@@ -83,20 +89,23 @@ def listar_tareas(skip: int = 0, limit: int = 100, db: Session = Depends(get_db)
 
 @app.post("/api/tareas", response_model=schemas.Tarea, tags=["Tareas"], status_code=201)
 def crear_tarea(tarea: schemas.TareaCreate, db: Session = Depends(get_db)):
+    # 1. Caso de error: Validar el título
+    es_valido, error = logica.validar_titulo(tarea.titulo)
+    if not es_valido:
+        raise HTTPException(status_code=400, detail=error)
+
     db_tarea = models.Tarea(**tarea.model_dump())
     
-    # Lógica de negocio SLA: calcular fecha de vencimiento
-    now = datetime.datetime.now(datetime.timezone.utc)
-    if db_tarea.prioridad == "alta":
-        db_tarea.fecha_vencimiento = now + datetime.timedelta(days=1)
-    elif db_tarea.prioridad == "baja":
-        db_tarea.fecha_vencimiento = now + datetime.timedelta(days=7)
-    else:
-        db_tarea.fecha_vencimiento = now + datetime.timedelta(days=3)
+    # 2. Lógica pura: calcular fecha de vencimiento
+    db_tarea.fecha_vencimiento = logica.calcular_vencimiento(db_tarea.prioridad)
         
     db.add(db_tarea)
     db.commit()
     db.refresh(db_tarea)
+    
+    # 3. Notificar (Mockeable)
+    servicio_tareas.crear_tarea_notificada(db_tarea.titulo)
+    
     return db_tarea
 
 @app.put("/api/tareas/{tarea_id}", response_model=schemas.Tarea, tags=["Tareas"])
