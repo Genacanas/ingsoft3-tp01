@@ -42,3 +42,16 @@ def test_crear_tarea_llama_al_notificador_una_vez():
     
     # Assert: Verificamos LA INTERACCIÓN (no el retorno)
     notificador_mock.enviar.assert_called_once_with("Nueva tarea creada: Comprar pan")
+
+from logica import categorizar_tarea
+
+@pytest.mark.parametrize("dias,categoria_esperada", [
+    (-1, "vencida"),
+    (0, "hoy"),
+    (2, "urgente"),
+    (5, "normal"),
+    (15, "largo plazo"),
+    (40, "sin apuro")
+])
+def test_categorizar_tarea_retorna_categoria_correcta(dias, categoria_esperada):
+    assert categorizar_tarea(dias) == categoria_esperada
