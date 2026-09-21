@@ -20,3 +20,15 @@ def validar_titulo(titulo: str):
     if len(titulo) > LIMITE:
         return False, f"El título no puede superar los {LIMITE} caracteres."
     return True, None
+
+def calcular_prioridad_dinamica(nivel_usuario: int, urgencia: int):
+    """Otra función sin tests para dejar el PR rojo."""
+    if nivel_usuario > 100:
+        return "alta"
+    elif urgencia > 5:
+        if nivel_usuario > 50:
+            return "media"
+        else:
+            return "baja"
+    else:
+        return "baja"
