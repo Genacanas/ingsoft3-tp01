@@ -6,6 +6,8 @@ COPY . .
 ENTRYPOINT ["npm", "run", "test:ci"]
 
 FROM nginx:alpine
-COPY nginx.conf /etc/nginx/conf.d/default.conf
+COPY default.conf.template /etc/nginx/templates/default.conf.template
 COPY . /usr/share/nginx/html
+ENV BACKEND_URL=http://backend:8080 \
+    DNS_RESOLVER=127.0.0.11
 EXPOSE 80
