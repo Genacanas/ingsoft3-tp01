@@ -184,8 +184,8 @@ jobs:
       - name: Smoke test PROD
         shell: bash
         env:
-          URL_API: https://REEMPLAZAR-CON-TU-API-PROD.onrender.com
-          URL_FRONT: https://REEMPLAZAR-CON-TU-FRONT-PROD.onrender.com
+          URL_API: https://api-prod-fr0c.onrender.com
+          URL_FRONT: https://front-prod-oqig.onrender.com
         run: |
           for i in $(seq 1 30); do
             if curl -fsS --max-time 10 "$URL_API/health" \
