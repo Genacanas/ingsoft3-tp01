@@ -155,8 +155,8 @@ jobs:
       - name: Smoke test (espera a que QA conteste)
         shell: bash
         env:
-          URL_API: https://REEMPLAZAR-CON-TU-API-QA.onrender.com
-          URL_FRONT: https://REEMPLAZAR-CON-TU-FRONT-QA.onrender.com
+          URL_API: https://api-qa-9oml.onrender.com
+          URL_FRONT: https://front-qa-lu45.onrender.com
         run: |
           echo "Esperando a que QA esté vivo..."
           for i in $(seq 1 30); do
