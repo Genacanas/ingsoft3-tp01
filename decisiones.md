@@ -137,3 +137,43 @@ Se utilizÃ³ la IA generativa (Antigravity AI Assistant) para:
 
 VerificaciÃ³n: cada archivo generado por IA fue ejecutado localmente (`python -m pytest`, `npm run test -- --run --coverage`) y los resultados revisados antes de hacer commit. Se puede defender cada assert y quÃ© comportamiento protege.
 
+
+## TP06 - CD: Environments, Aprobaciones y Deployment Patterns
+
+### Enlaces de este TP
+- **Paquete Backend:** https://github.com/Genacanas/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-backend
+- **Paquete Frontend:** https://github.com/Genacanas/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-frontend
+- **URL de QA (Frontend):** https://front-qa-lu45.onrender.com
+- **URL de PROD (Frontend):** https://front-prod-oqig.onrender.com
+- **Corrida donde salteó publicar la imagen (PR):** https://github.com/Genacanas/ingsoft3-tp01/actions
+- **Corrida final en main (Publicó y Desplegó):** https://github.com/Genacanas/ingsoft3-tp01/actions
+
+### El artefacto
+El pipeline publica las imágenes Docker **solo** cuando la verificación está en verde y el push es en main. El paso de publicación está intencionalmente al final del job uild-backend y uild-frontend. Si se publicara igual cuando los tests fallan, estar publicado dejaría de significar "esto pasó la verificación" y el registry se llenaría de imágenes rotas.
+
+### CD vs Continuous Deployment
+Implementamos **Continuous Delivery**. Hay un pipeline que automatiza la verificación y el despliegue a QA, pero el paso final hacia Producción tiene un "gate humano" (aprobación manual). Continuous Deployment sería si el pipeline llegara a producción sin intervención humana, lo cual requiere una madurez muy alta en tests y monitoreo.
+
+### El diseño de la cadena
+- 
+eeds: deploy-qa asegura que Producción no se dispare hasta que QA haya sido desplegado exitosamente.
+- if: github.ref == 'refs/heads/main' en deploy-qa garantiza que los Pull Requests verifiquen pero no desplieguen.
+- environment: qa y environment: production se usan para heredar los secretos de los Deploy Hooks con alcance restringido (los de PROD no son accesibles para QA ni para PRs no aprobados).
+
+### El Aprobador
+Antes de aprobar el paso a Producción, el aprobador revisa que el smoke test de QA haya dado verde, verifica qué cambia en ese commit en particular, y se asegura de que sea el momento adecuado para el negocio.
+
+### Letra chica del Free Tier y Smoke Test
+El free tier de Render tiene cold starts (el servicio se duerme tras 15 minutos sin tráfico). Si el pipeline hiciera un simple curl, fallaría. Por eso el smoke test tiene un loop que reintenta cada 20 segundos hasta 30 veces. El smoke test llama a /health, /api/tareas (para confirmar la BD) y al front. Sin embargo, no verifica *qué* versión está corriendo, solo que responde.
+
+### Garantía perdida en Render
+Dado que Render (en este TP) reconstruye la aplicación desde el código fuente del repositorio en lugar de correr la imagen inmutable que publicamos en ghcr.io, perdemos la garantía estricta de que "se despliega exactamente lo mismo que se verificó" (podrían cambiar dependencias en ese nuevo build). Esto se soluciona desplegando imágenes pre-compiladas.
+
+### Estrategia de Deployment y Rollback
+- **Estrategia para PROD real:** Elegiría **Blue-Green** porque permite tener dos entornos productivos y el cambio (router) es instantáneo, con cero downtime y rollback inmediato. Requeriría duplicar infraestructura temporalmente.
+- **Plan de Rollback actual:** Para volver atrás en caso de falla, copio las URLs de los Deploy Hooks de Render de PROD y les agrego &ref=<SHA_ANTERIOR>. 
+- **Tiempo cronometrado del rollback:** (TIEMPO_MEDIDO_EN_SEGUNDOS) segundos.
+- *Aclaración:* El rollback redespliega el código viejo, pero **NO** deshace los cambios en la base de datos (por ejemplo, columnas eliminadas).
+
+### Declaración de IA
+Se utilizó Antigravity AI para guiar la creación de los entornos, configurar ci.yml, escribir la plantilla de Nginx y redactar este documento de decisiones.
