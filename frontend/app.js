@@ -5,6 +5,7 @@ const API_URL = 'http://localhost:8080/api';
 const taskForm = document.getElementById('task-form');
 const taskList = document.getElementById('task-list');
 const loadingEl = document.getElementById('loading');
+const formErrorEl = document.getElementById('form-error');
 
 // Elementos del dashboard
 const dashboardEl = document.getElementById('dashboard');
@@ -78,17 +79,32 @@ async function fetchMetricas() {
 
 async function createTask(taskData) {
     try {
+        if (formErrorEl) formErrorEl.style.display = 'none';
         const response = await fetch(`${API_URL}/tareas`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify(taskData),
         });
         
-        if (!response.ok) throw new Error('Error al crear');
+        if (!response.ok) {
+            const errorData = await response.json().catch(() => null);
+            const msg = errorData?.detail || 'Hubo un error al crear la tarea.';
+            if (formErrorEl) {
+                formErrorEl.textContent = msg;
+                formErrorEl.style.display = 'block';
+            }
+            return;
+        }
+        if (formErrorEl) formErrorEl.style.display = 'none';
         fetchTasks();
         fetchMetricas();
     } catch (error) {
-        alert('Hubo un error al crear la tarea.');
+        if (formErrorEl) {
+            formErrorEl.textContent = 'Hubo un error al conectar con el servidor.';
+            formErrorEl.style.display = 'block';
+        } else {
+            alert('Hubo un error al crear la tarea.');
+        }
     }
 }
 
@@ -212,7 +228,7 @@ function renderTasks(tasks) {
                         onclick="toggleTaskComplete(${task.id}, ${task.completada})">
                     ${task.completada ? 'Deshacer' : 'Completar'}
                 </button>
-                <button class="btn btn-sm btn-danger" onclick="deleteTask(${task.id})">Eliminar</button>
+                <button class="btn btn-sm btn-danger" aria-label="Eliminar ${escapeHTML(task.titulo)}" onclick="deleteTask(${task.id})">Eliminar</button>
             </div>
         `;
         
