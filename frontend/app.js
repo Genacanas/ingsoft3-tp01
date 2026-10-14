@@ -1,5 +1,5 @@
-// URL base de la API FastAPI
-const API_URL = 'http://localhost:8080/api';
+// URL base de la API (relativa, resuelta por el reverse proxy de Nginx / Vite)
+const API_URL = '/api';
 
 // Referencias a elementos del DOM
 const taskForm = document.getElementById('task-form');
