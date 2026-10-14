@@ -177,3 +177,108 @@ Dado que Render (en este TP) reconstruye la aplicaci�n desde el c�digo fuent
 
 ### Declaraci�n de IA
 Se utiliz� Antigravity AI para guiar la creaci�n de los entornos, configurar ci.yml, escribir la plantilla de Nginx y redactar este documento de decisiones.
+
+
+## TP07 — Contenedores en el pipeline + Integración y E2E
+
+### Enlaces del TP7
+
+| Recurso | URL |
+|---|---|
+| Backend package (ghcr.io) | https://github.com/Genacanas/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-backend |
+| Frontend package (ghcr.io) | https://github.com/Genacanas/ingsoft3-tp01/pkgs/container/ingsoft3-tp01-frontend |
+| Commit que rompió la app | `6447c165e81e6f1a398acd4db6b5010806020437` |
+| Corrida fallida (integración 🟢 / E2E 🔴) | https://github.com/Genacanas/ingsoft3-tp01/actions/runs/38500864916 |
+| Corrida exitosa hasta PROD | https://github.com/Genacanas/ingsoft3-tp01/actions/runs/38502481406 |
+| QA Frontend | https://front-qa-vvvs.onrender.com |
+| QA API | https://api-qa-h097.onrender.com |
+| PROD Frontend | https://front-prod-tfut.onrender.com |
+| PROD API | https://api-prod-3ip5.onrender.com |
+
+### 1. Build once, deploy many — qué problema del TP6 resuelve
+
+En el TP6, Render reconstruía la aplicación desde el código fuente cada vez que hacíamos un deploy. Eso introduce un riesgo sutil: las dependencias (package.json, pip) se resuelven de nuevo en el momento del build, y si alguna biblioteca publica una versión nueva o el índice de paquetes cambia, el binario que llega a PROD puede diferir del que pasó los tests en CI. "Build once, deploy many" cierra esa brecha: publicamos una imagen inmutable en ghcr.io, la verificamos en QA y mandamos *esa misma imagen* a PROD, sin recompilar nada.
+
+### 2. Estrategia de etiquetas
+
+Usamos dos tipos de etiqueta en ghcr.io:
+
+- **`sha-<commit>`**: identifica exactamente qué código contiene la imagen. Es inmutable: no se puede pisar con otro push. El pipeline la genera automáticamente para cada commit que llega a `main`.
+- **`v7.0.0`**: nombre semántico, legible por humanos, que marca el release oficial. Apunta al mismo layer que `sha-5aa06e5`.
+
+No publicamos `latest` porque `latest` es mutable: si alguien la pisa en un deploy futuro, perdemos la trazabilidad y no sabemos qué está corriendo en PROD.
+
+En Render, cada servicio se configuró apuntando a la imagen inicial. Pero el Deploy Hook que llama el pipeline siempre pasa la imagen de *esa corrida concreta* mediante el parámetro `imgURL`, sobreescribiendo la imagen base configurada en el servicio.
+
+### 3. Del tag a la imagen: trazabilidad completa
+
+```
+git rev-list -n1 v7.0.0
+# → 5aa06e58fbd468df87576cf941f4340dc00b0704
+
+# La imagen en ghcr.io se llama:
+ghcr.io/genacanas/ingsoft3-tp01-backend:sha-5aa06e5
+ghcr.io/genacanas/ingsoft3-tp01-frontend:sha-5aa06e5
+```
+
+Así se puede ir desde la etiqueta del release hasta la imagen exacta que corre en producción, sin ambigüedad.
+
+### 4. Cómo comprobar que un entorno ejecuta TU imagen
+
+Mirando el panel **Events** del servicio en Render: debe decir `"Triggered via Deploy Hook"` junto al SHA de la imagen que le pasamos. El smoke test solo verifica que el servicio responde; si el deploy falló pero el servicio antiguo sigue levantado, el smoke devuelve 200 igual. El evento de Render es la única prueba de que el deploy realmente ocurrió con la imagen nueva.
+
+### 5. Tests elegidos
+
+**Integración (api.spec.js) — 3 tests, fixture `request`:**
+1. `GET /api/tareas` responde 200 y devuelve un array.
+2. `POST /api/tareas` con título válido crea la tarea y la devuelve con `id`.
+3. `POST /api/tareas` con título vacío devuelve 422 (validación del backend).
+
+Estos tests hablan directamente con la API desplegada en QA, sin browser ni frontend. Verifican que el contrato HTTP del backend funciona.
+
+**E2E (tareas.spec.js) — 3 tests, browser Chromium:**
+1. Crear una tarea → aparece en la lista → el botón "Eliminar" la saca.
+2. Título de más de 100 caracteres → aparece el mensaje de error en el DOM, no se crea la tarea.
+3. Crear una tarea → presionar "Completar" → el ítem cambia de estilo (clase `completada`).
+
+Estos tests simulan un usuario real: abren el navegador, hacen clic, leen el DOM.
+
+### 6. Por qué integración ≠ E2E — la tabla verde/rojo
+
+| Integración | E2E | Significado |
+|---|---|---|
+| 🟢 | 🟢 | Todo bien |
+| 🟢 | 🔴 | El backend funciona, el frontend está roto (ej: botón con texto incorrecto) |
+| 🔴 | 🔴 | El backend está caído, el frontend también falla en consecuencia |
+| 🔴 | 🟢 | Improbable, pero podría pasar si E2E usa datos cacheados |
+
+En nuestra rotura controlada (PR #34) cambiamos el texto del botón de `"Agregar Tarea"` a `"Crear Tarea"`. Los tests de integración dieron verde porque la API no cambió. Los E2E dieron rojo porque Playwright no encontró el botón. Eso demostró que las dos capas de tests son complementarias.
+
+### 7. Integración amplia vs. estrecha
+
+Usamos **integración amplia** (también llamada "social"): los tests de integración llaman a la API real ya desplegada en QA, con su base de datos de verdad. La alternativa estrecha ("solitary") levantaría un backend con BD mockeada localmente en CI.
+
+- **Ventaja de la opción elegida:** simplicidad, no hay que arrancar servicios locales ni mockear nada.
+- **Desventaja:** si la BD de QA tiene datos sucios o el servicio tiene cold start, el test puede fallar por razones ajenas al código.
+
+### 8. Cold start y estrategia de espera
+
+Los servicios de Render free tier se apagan tras 15 minutos sin tráfico. Para mitigarlo:
+
+- El job `smoke` despierta explícitamente los servicios de QA antes de que corran los tests.
+- Los tests E2E tienen timeout de 60 segundos por acción y 1 retry automático (`retries: 1` en `playwright.config.js`).
+
+### 9. Misma imagen en QA y PROD del front
+
+El frontend tiene una sola imagen (`ghcr.io/genacanas/ingsoft3-tp01-frontend:sha-...`). Lo que cambia entre QA y PROD es la variable de entorno `BACKEND_URL` que Nginx usa como proxy inverso: en QA apunta a `api-qa-h097.onrender.com` y en PROD a `api-prod-3ip5.onrender.com`. Así una sola imagen sirve para ambos entornos.
+
+### 10. Servicios recreados como "Existing Image"
+
+El free tier de Render eliminó los servicios originales del TP6 por inactividad. Al recrearlos, los creamos directamente como **Existing Image** porque la interfaz de Render no permite cambiar el tipo de fuente de un servicio existente una vez creado. Las nuevas URLs se cargaron en los Secrets de GitHub (`RENDER_HOOK_FRONT_QA`, etc.).
+
+### 11. Límite conocido: QA compartido entre corridas
+
+Si dos Pull Requests se mergean casi al mismo tiempo, sus pipelines pueden correr en paralelo. Ambos deploys apuntan al mismo servicio QA, así que los tests de la corrida A podrían ejecutarse sobre la imagen de la corrida B (o viceversa). Este problema se llama *race condition en el entorno compartido* y la solución habitual es usar entornos efímeros por rama (deploy-per-PR), que no tenemos en el free tier.
+
+### Declaración de IA
+Se utilizó Antigravity AI para diseñar la estrategia de tests de integración y E2E, configurar el pipeline completo (incluyendo el job de rotura controlada), debuggear el error de `API_URL` hardcodeada en `localhost`, y redactar esta sección de decisiones.
