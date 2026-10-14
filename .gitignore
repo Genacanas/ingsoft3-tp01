@@ -28,3 +28,13 @@ env/
 *.sqlite
 *.sqlite3
 backend/tareas.db
+
+# Playwright
+playwright-report/
+test-results/
+
+# Coverage
+coverage/
+frontend/coverage/
+.coverage
+*.coverage
