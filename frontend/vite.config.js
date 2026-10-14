@@ -1,6 +1,11 @@
 import { defineConfig, configDefaults } from 'vitest/config';
 
 export default defineConfig({
+  server: {
+    proxy: {
+      '/api': 'http://localhost:8080',
+    },
+  },
   test: {
     exclude: [...configDefaults.exclude, 'e2e/**'],
     coverage: {
