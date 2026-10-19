@@ -38,3 +38,9 @@ coverage/
 frontend/coverage/
 .coverage
 *.coverage
+
+# Terraform (estado y variables con secretos)
+*.tfstate
+*.tfstate.*
+.terraform/
+*.tfvars
