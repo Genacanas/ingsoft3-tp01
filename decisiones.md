@@ -282,3 +282,29 @@ Si dos Pull Requests se mergean casi al mismo tiempo, sus pipelines pueden corre
 
 ### Declaración de IA
 Se utilizó Antigravity AI para diseñar la estrategia de tests de integración y E2E, configurar el pipeline completo (incluyendo el job de rotura controlada), debuggear el error de `API_URL` hardcodeada en `localhost`, y redactar esta sección de decisiones.
+
+
+## TP08 - Infraestructura como Código (IaC)
+
+### 1. Riel elegido y versiones fijadas de providers
+- **Riel:** Canónico con **Terraform** contra **Neon** (base de datos relacional PostgreSQL gestionada) y **Render** (servicios web para API backend y SPA frontend).
+- **Entorno creado:** `preprod` (entorno nuevo, desechable y efímero, manteniendo intactos y aislados los entornos de QA y Producción creados en los prácticos anteriores).
+- **Versiones fijadas:**
+  - `kislerdm/neon`: versión `0.18.0` (fijada explícitamente para evitar roturas ante futuros cambios de namespace de la organización Neon en el registry).
+  - `render-oss/render`: versión `1.9.1` (fijada explícitamente conforme a las buenas prácticas de higiene de IaC).
+  - Terraform required version: `>= 1.5` (ejecutado con Terraform `v1.16.6`).
+
+### 2. Problemas encontrados y cómo se resolvieron
+1. **Error `org_id is required` en Neon (`HTTP Code 400`):**
+   - *Problema:* Al ejecutar el primer `terraform apply` sobre `neon_project.preprod`, la API de Neon rechazó la solicitud indicando que el proyecto requería un identificador de organización.
+   - *Solución:* Se consultó la API de Neon (`GET /api/v2/users/me/organizations`) con la `NEON_API_KEY` para obtener el identificador de la organización (`org-blue-king-13087925`) y se declaró explícitamente en el recurso `neon_project.preprod` en `infra/main.tf`.
+2. **Error `invalid ownerID` en Render:**
+   - *Problema:* Al intentar crear `render_web_service.api`, la API de Render falló indicando que el `RENDER_OWNER_ID` provisto (`usr-daul...`) no era válido.
+   - *Solución:* Se consultó el endpoint `/v1/owners` de Render con la `RENDER_API_KEY`, descubriendo que el workspace del usuario estaba configurado como equipo (`team`), correspondiéndole el ID `tea-daul43gu01pc7385am4g`. Al actualizar la variable de entorno, el provider pudo crear los servicios inmediatamente.
+3. **Manejo del ciclo de vida y preservación de cuota en el Free Tier:**
+   - *Problema:* Render impone un límite de 750 horas de cómputo mensuales compartidas a nivel de workspace para todos los servicios gratuitos. Con 6 servicios activos (QA, PROD y PREPROD), el cupo se agotaría rápidamente comprometiendo la disponibilidad de Producción.
+   - *Solución:* Se adoptó la práctica de tratar a `preprod` como un entorno estrictamente efímero y desechable. Se ejecuta `terraform destroy` al concluir las sesiones de trabajo o pruebas, y `terraform apply` para regenerarlo idéntico en pocos segundos cuando se requiera para la defensa.
+
+### 3. Declaración de IA
+Se utilizó Antigravity AI para la instalación y configuración de Terraform, la redacción de los archivos HCL (`main.tf`, `variables.tf`, `outputs.tf`), el diagnóstico y resolución de errores de APIs de Neon y Render (`org_id` y `RENDER_OWNER_ID`), la ejecución de las pruebas de idempotencia, drift y `prevent_destroy`, y la redacción de este documento.
+
