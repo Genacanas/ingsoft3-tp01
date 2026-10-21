@@ -1,3 +1,5 @@
+import os
+import sentry_sdk
 from fastapi import FastAPI, Depends, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy.orm import Session
@@ -8,6 +10,15 @@ import models, schemas
 from database import engine, get_db
 import logica
 from servicios import ServicioDeTareas, NotificadorEmail
+
+# Inicializar Sentry si SENTRY_DSN esta configurado en el entorno
+sentry_dsn = os.getenv("SENTRY_DSN", "")
+if sentry_dsn:
+    sentry_sdk.init(
+        dsn=sentry_dsn,
+        traces_sample_rate=1.0,
+        environment=os.getenv("ENVIRONMENT", "production"),
+    )
 
 # Instanciamos el servicio
 notificador_real = NotificadorEmail()
@@ -31,9 +42,14 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-@app.get("/health", tags=["Sistema"])
+@app.api_route("/health", methods=["GET", "HEAD"], tags=["Sistema"])
 def health_check():
     return {"status": "ok"}
+
+@app.get("/api/falla", tags=["Sistema"])
+def endpoint_falla_tp9():
+    """Endpoint temporal para provocar un error 500 y verificar Sentry en TP9."""
+    raise RuntimeError("Falla de prueba controlada del TP9 para Sentry")
 
 @app.get("/api/metricas", tags=["Métricas"])
 def obtener_metricas(db: Session = Depends(get_db)):
