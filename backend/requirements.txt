@@ -7,7 +7,7 @@ fastapi==0.146.0
 greenlet==3.5.5
 h11==0.16.0
 idna==3.18
-psycopg2-binary==2.9.12
+psycopg2-binary==2.9.13
 pydantic==2.13.4
 pydantic_core==2.46.4
 python-dotenv==1.2.3
