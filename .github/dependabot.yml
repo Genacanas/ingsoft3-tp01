@@ -1,0 +1,16 @@
+version: 2
+updates:
+  - package-ecosystem: "pip"              # dependencias de Python (FastAPI backend)
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "npm"              # dependencias de Node/JavaScript (frontend)
+    directory: "/frontend"
+    schedule:
+      interval: "weekly"
+
+  - package-ecosystem: "github-actions"   # dependencias de GitHub Actions workflows
+    directory: "/"
+    schedule:
+      interval: "weekly"
