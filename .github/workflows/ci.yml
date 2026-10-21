@@ -25,7 +25,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Construir la etapa de tests del backend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./backend
           target: test
@@ -86,7 +86,7 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Construir la etapa de tests del frontend
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@v7
         with:
           context: ./frontend
           target: test
