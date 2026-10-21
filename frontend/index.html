@@ -62,17 +62,19 @@
     </div>
 
     <!-- Sentry SDK para observabilidad en el frontend (TP9) -->
-    <script src="https://browser.sentry-cdn.com/8.38.0/bundle.tracing.min.js" crossorigin="anonymous"></script>
+    <script
+      src="https://js.sentry-cdn.com/5cde08b143fc423dcace24c20afcb926.min.js"
+      crossorigin="anonymous"
+    ></script>
     <script>
-      const SENTRY_FRONTEND_DSN = "REEMPLAZAR_CON_SENTRY_DSN_FRONTEND";
-      if (window.Sentry && SENTRY_FRONTEND_DSN && SENTRY_FRONTEND_DSN.startsWith("http")) {
-        Sentry.init({
-          dsn: SENTRY_FRONTEND_DSN,
-          environment: window.location.hostname,
-          integrations: [Sentry.browserTracingIntegration()],
-          tracesSampleRate: 1.0,
-        });
-      }
+      window.sentryOnLoad = function () {
+        if (window.Sentry) {
+          Sentry.init({
+            environment: window.location.hostname,
+            tracesSampleRate: 1.0,
+          });
+        }
+      };
     </script>
     <script src="app.js"></script>
 </body>
