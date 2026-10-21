@@ -308,3 +308,29 @@ Se utilizó Antigravity AI para diseñar la estrategia de tests de integración 
 ### 3. Declaración de IA
 Se utilizó Antigravity AI para la instalación y configuración de Terraform, la redacción de los archivos HCL (`main.tf`, `variables.tf`, `outputs.tf`), el diagnóstico y resolución de errores de APIs de Neon y Render (`org_id` y `RENDER_OWNER_ID`), la ejecución de las pruebas de idempotencia, drift y `prevent_destroy`, y la redacción de este documento.
 
+
+
+## TP09 — DevSecOps, Observabilidad y Continuous Feedback
+
+### 1. PR de Dependabot analizado y mergeado
+- **Pull Request mergeado:** PR #53 (`chore(deps): bump fastapi from 0.141.1 to 0.146.0 in /backend`).
+- **Qué actualizaba:** Actualizó el framework principal del backend (`fastapi`) de la versión `0.141.1` a la versión `0.146.0`.
+- **Por qué me animé a mergearlo:** Se trata de un incremento de versión menor (*minor bump* bajo SemVer), el cual mantiene retrocompatibilidad con la API existente y no introduce cambios disruptivos (*breaking changes*). La decisión de mergear se basó en la red de seguridad del pipeline de CI: la corrida ejecutó los 15 tests unitarios con cobertura superior al 80% (`pytest-cov`), la construcción de imágenes en Docker, las pruebas de integración de API y la suite E2E con Playwright en Chromium, finalizando con todos los checks en verde. Contrastó con otros PRs automáticos de Dependabot (como el salto mayor de Vitest 3 a 5) donde el CI actuó de guardián frenando la integración por incompatibilidades de versión.
+
+### 2. Observabilidad: Monitor externo y telemetría en producción
+- **Monitoreo externo (UptimeRobot):** Se configuró un monitor HTTP(s) sobre `https://api-prod-3ip5.onrender.com/health` con intervalo de verificación de 5 minutos y método HEAD/GET.
+- **Tiempo de detección de la caída:** Tras suspender el servicio de backend de producción en Render, UptimeRobot tardó **5 minutos** (un ciclo de polling) en detectar el fallo y despachar la notificación de **DOWN** por correo electrónico. Al reanudar el servicio y verificar el arranque, se recibió la alerta de **UP AGAIN**. El monitor fue inmediatamente pausado para preservar el cupo mensual compartido de 750 horas de cómputo del free tier de Render.
+- **Operación más usada (Sentry):** `POST /api/tareas` y `GET /api/tareas`, acumulando la mayor cantidad de invocaciones y tiempo total de procesamiento en la tabla de *Transactions*.
+- **Operación más lenta (Sentry):** `POST /api/tareas` con una latencia en el percentil 95 (**P95**) de **1.06 s** (seguida por `DELETE /api/tareas` con P95 de 706.53 ms). Esta demora refleja la latencia de red inherente a la apertura de sesión y persistencia sobre la base de datos PostgreSQL remota en Neon.
+- **Detección de errores y tarjeta de feedback:** Se verificó la captura en tiempo real en la sección *Issues* de Sentry del error `RuntimeError: Falla de prueba controlada del TP9 para Sentry` en el endpoint `/api/falla` (Failure rate de 1). A partir de la telemetría recolectada, se retroalimentó el ciclo abriendo una tarjeta de mejora en el tablero de GitHub Projects del TP3: `[Performance] Optimizar tiempo de respuesta P95 de POST /api/tareas (1.06s)` para evaluar connection pooling o caching.
+
+### 3. Problemas encontrados y soluciones
+1. **Soporte de método HEAD en el Health Check:**
+   - *Problema:* El plan gratuito de UptimeRobot utiliza peticiones HTTP `HEAD` en lugar de `GET`. La ruta original en FastAPI (`@app.get("/health")`) no respondía a HEAD, lo que provocaba un código HTTP 405 (Method Not Allowed) simulando una caída falsa con la app sana.
+   - *Solución:* Se reconfiguró el endpoint usando `@app.api_route("/health", methods=["GET", "HEAD"])`, garantizando respuestas 200 OK tanto para el monitor externo como para el smoke test del pipeline.
+2. **Diferenciación de seguridad en claves DSN (Backend vs Frontend):**
+   - *Problema:* Duda sobre la exposición de credenciales del DSN de Sentry en repositorios públicos.
+   - *Solución:* En el backend, el DSN se configuró estrictamente vía variable de entorno de Render (`SENTRY_DSN`). En el frontend, se utilizó el loader script en `index.html`, comprendiendo conceptualmente que el DSN del cliente es de solo envío y viaja de forma pública y visible en el bundle del navegador sin comprometer permisos de administración o lectura de datos.
+
+### 4. Declaración de uso de IA
+Se utilizó asistencia de IA (Antigravity AI) para la definición del archivo `.github/dependabot.yml` adaptado a los tres ecosistemas del proyecto (`pip`, `npm`, `github-actions`), la instrumentación de los SDKs de Sentry en FastAPI y frontend Vanilla JS, la resolución de compatibilidad para peticiones HEAD en FastAPI, el disparo de tráfico sintético para validación de percentiles de rendimiento en producción, y la estructuración de la documentación de decisiones para la defensa oral.
