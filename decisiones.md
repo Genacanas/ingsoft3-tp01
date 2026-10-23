@@ -175,8 +175,17 @@ Dado que Render (en este TP) reconstruye la aplicaci�n desde el c�digo fuent
 - **Tiempo cronometrado del rollback:** 36 segundos.
 - *Aclaraci�n:* El rollback redespliega el c�digo viejo, pero **NO** deshace los cambios en la base de datos (por ejemplo, columnas eliminadas).
 
-### Declaraci�n de IA
-Se utiliz� Antigravity AI para guiar la creaci�n de los entornos, configurar ci.yml, escribir la plantilla de Nginx y redactar este documento de decisiones.
+### Pase a PROD rechazado
+
+- **Corrida:** https://github.com/Genacanas/ingsoft3-tp01/actions/runs/36764457489
+- **Entorno:** `production`
+- **Rechazado por:** Genacanas
+- **Motivo del rechazo:** "Rechazo este deploy porque falta incluir el cambio visual en el título del frontend que indica que es la versión final del TP6."
+
+El deploy fue retenido en el gate humano del environment `production` porque el commit en cuestión no incluía el cambio de título que debía marcar la entrega final del TP6. Una vez incorporado ese cambio en un nuevo commit y verificado en QA, el pipeline se volvió a ejecutar y el pase a PROD fue aprobado.
+
+### Declaración de IA
+Se utilizó Antigravity AI para guiar la creación de los entornos, configurar ci.yml, escribir la plantilla de Nginx y redactar este documento de decisiones.
 
 
 ## TP07 — Contenedores en el pipeline + Integración y E2E
